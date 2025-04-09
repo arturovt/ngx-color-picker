@@ -1,12 +1,12 @@
 <div
   #dialogPopup
   class="color-picker"
-  [class.open]="show"
-  [style.display]="!show ? 'none' : 'block'"
-  [style.visibility]="hidden ? 'hidden' : 'visible'"
+  [class.open]="shown()"
+  [style.display]="shown() ? 'block' : 'none'"
+  [style.visibility]="hidden() ? 'hidden' : 'visible'"
   [style.top.px]="top"
   [style.left.px]="left"
-  [style.position]="position"
+  [style.position]="position()"
   [style.height.px]="cpHeight"
   [style.width.px]="cpWidth"
 >
@@ -14,7 +14,7 @@
     <div
       [style.left]="cpArrowPosition"
       class="arrow arrow-{{ cpUsePosition }}"
-      [style.top.px]="arrowTop"
+      [style.top.px]="arrowTop()"
     ></div>
   }
 

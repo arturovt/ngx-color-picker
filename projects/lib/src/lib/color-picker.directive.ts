@@ -1,77 +1,71 @@
 import {
   Directive,
   OnChanges,
-  OnDestroy,
   Input,
   Output,
   EventEmitter,
   HostListener,
-  ApplicationRef,
   ComponentRef,
   ElementRef,
   ViewContainerRef,
-  Injector,
-  EmbeddedViewRef,
+  inject,
+  DestroyRef,
 } from '@angular/core';
 
 import { AlphaChannel, ColorMode, OutputFormat } from './helpers';
+import { ColorPickerComponent } from './color-picker.component';
 
 @Directive({
   selector: '[colorPicker]',
   exportAs: 'ngxColorPicker',
 })
-export class ColorPickerDirective implements OnChanges, OnDestroy {
-  private dialog: any;
+export class ColorPickerDirective implements OnChanges {
+  private dialog: ColorPickerComponent | null = null;
 
-  private dialogCreated: boolean = false;
-  private ignoreChanges: boolean = false;
+  private dialogCreated = false;
+  private ignoreChanges = false;
 
-  private cmpRef: ComponentRef<
-    import('./color-picker.component').ColorPickerComponent
-  >;
-  private viewAttachedToAppRef: boolean = false;
+  private componentRef: ComponentRef<ColorPickerComponent> | null = null;
 
   @Input() colorPicker: string;
 
   @Input() cpWidth: string = '230px';
   @Input() cpHeight: string = 'auto';
 
-  @Input() cpToggle: boolean = false;
-  @Input() cpDisabled: boolean = false;
+  @Input() cpToggle = false;
+  @Input() cpDisabled = false;
 
-  @Input() cpIgnoredElements: any = [];
+  @Input() cpIgnoredElements: HTMLElement[] = [];
 
   @Input() cpFallbackColor: string = '';
 
   @Input() cpColorMode: ColorMode = 'color';
 
-  @Input() cpCmykEnabled: boolean = false;
+  @Input() cpCmykEnabled = false;
 
   @Input() cpOutputFormat: OutputFormat = 'auto';
   @Input() cpAlphaChannel: AlphaChannel = 'enabled';
 
-  @Input() cpDisableInput: boolean = false;
+  @Input() cpDisableInput = false;
 
   @Input() cpDialogDisplay: string = 'popup';
 
-  @Input() cpSaveClickOutside: boolean = true;
-  @Input() cpCloseClickOutside: boolean = true;
-
-  @Input() cpUseRootViewContainer: boolean = false;
+  @Input() cpSaveClickOutside = true;
+  @Input() cpCloseClickOutside = true;
 
   @Input() cpPosition: string = 'auto';
   @Input() cpPositionOffset: string = '0%';
-  @Input() cpPositionRelativeToArrow: boolean = false;
+  @Input() cpPositionRelativeToArrow = false;
 
-  @Input() cpOKButton: boolean = false;
+  @Input() cpOKButton = false;
   @Input() cpOKButtonText: string = 'OK';
   @Input() cpOKButtonClass: string = 'cp-ok-button-class';
 
-  @Input() cpCancelButton: boolean = false;
+  @Input() cpCancelButton = false;
   @Input() cpCancelButtonText: string = 'Cancel';
   @Input() cpCancelButtonClass: string = 'cp-cancel-button-class';
 
-  @Input() cpEyeDropper: boolean = false;
+  @Input() cpEyeDropper = false;
 
   @Input() cpPresetLabel: string = 'Preset colors';
   @Input() cpPresetColors: string[];
@@ -81,7 +75,7 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
   @Input() cpPresetEmptyMessage: string = 'No colors added';
   @Input() cpPresetEmptyMessageClass: string = 'preset-empty-message';
 
-  @Input() cpAddColorButton: boolean = false;
+  @Input() cpAddColorButton = false;
   @Input() cpAddColorButtonText: string = 'Add color';
   @Input() cpAddColorButtonClass: string = 'cp-add-color-button-class';
 
@@ -129,28 +123,19 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
     this.inputFocus();
   }
 
-  @HostListener('input', ['$event']) handleInput(event: any): void {
+  @HostListener('input', ['$event']) handleInput(event: InputEvent): void {
     this.inputChange(event);
   }
 
-  constructor(
-    private readonly injector: Injector,
-    private readonly appRef: ApplicationRef,
-    private readonly vcRef: ViewContainerRef,
-    private readonly elRef: ElementRef
-  ) {}
+  private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly element =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
-  ngOnDestroy(): void {
-    if (this.cmpRef != null) {
-      if (this.viewAttachedToAppRef) {
-        this.appRef.detachView(this.cmpRef.hostView);
-      }
-
-      this.cmpRef.destroy();
-
-      this.cmpRef = null;
-      this.dialog = null;
-    }
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.componentRef?.destroy();
+      this.componentRef = this.dialog = null;
+    });
   }
 
   ngOnChanges(changes: any): void {
@@ -169,84 +154,28 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
         }
 
         this.dialog.setColorFromString(changes.colorPicker.currentValue, false);
-
-        if (this.cpUseRootViewContainer && this.cpDialogDisplay !== 'inline') {
-          this.cmpRef.changeDetectorRef.detectChanges();
-        }
       }
 
       this.ignoreChanges = false;
     }
 
-    if (changes.cpPresetLabel || changes.cpPresetColors) {
-      if (this.dialog) {
-        this.dialog.setPresetConfig(this.cpPresetLabel, this.cpPresetColors);
-      }
+    if ((changes.cpPresetLabel || changes.cpPresetColors) && this.dialog) {
+      this.dialog.setPresetConfig(this.cpPresetLabel, this.cpPresetColors);
     }
   }
 
-  async openDialog(): Promise<void> {
-    const { ColorPickerComponent } = await import('./color-picker.component');
-
+  openDialog(): void {
     if (!this.dialogCreated) {
-      let vcRef = this.vcRef;
+      const viewContainerRef = this.viewContainerRef;
 
       this.dialogCreated = true;
-      this.viewAttachedToAppRef = false;
 
-      if (this.cpUseRootViewContainer && this.cpDialogDisplay !== 'inline') {
-        const classOfRootComponent = this.appRef.componentTypes[0];
-        const appInstance = this.injector.get(
-          classOfRootComponent,
-          Injector.NULL
-        );
+      this.componentRef =
+        viewContainerRef.createComponent(ColorPickerComponent);
 
-        if (appInstance !== Injector.NULL) {
-          vcRef =
-            appInstance.vcRef || appInstance.viewContainerRef || this.vcRef;
-
-          if (
-            typeof ngDevMode !== 'undefined' &&
-            ngDevMode &&
-            vcRef === this.vcRef
-          ) {
-            console.warn(
-              'You are using cpUseRootViewContainer, ' +
-                'but the root component is not exposing viewContainerRef!' +
-                "Please expose it by adding 'vcRef: ViewContainerRef' to the constructor."
-            );
-          }
-        } else {
-          this.viewAttachedToAppRef = true;
-        }
-      }
-
-      if (this.viewAttachedToAppRef) {
-        this.cmpRef = vcRef.createComponent(ColorPickerComponent, {
-          injector: this.injector,
-        });
-        this.appRef.attachView(this.cmpRef.hostView);
-        document.body.appendChild(
-          (this.cmpRef.hostView as EmbeddedViewRef<any>)
-            .rootNodes[0] as HTMLElement
-        );
-      } else {
-        const injector = Injector.create({
-          providers: [],
-          // We shouldn't use `vcRef.parentInjector` since it's been deprecated long time ago and might be removed
-          // in newer Angular versions: https://github.com/angular/angular/pull/25174.
-          parent: vcRef.injector,
-        });
-
-        this.cmpRef = vcRef.createComponent(ColorPickerComponent, {
-          injector,
-          index: 0,
-        });
-      }
-
-      this.cmpRef.instance.setupDialog(
+      this.componentRef.instance.setupDialog(
         this,
-        this.elRef,
+        this.element,
         this.colorPicker,
         this.cpWidth,
         this.cpHeight,
@@ -260,7 +189,6 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
         this.cpIgnoredElements,
         this.cpSaveClickOutside,
         this.cpCloseClickOutside,
-        this.cpUseRootViewContainer,
         this.cpPosition,
         this.cpPositionOffset,
         this.cpPositionRelativeToArrow,
@@ -281,17 +209,17 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
         this.cpAddColorButtonText,
         this.cpRemoveColorButtonClass,
         this.cpEyeDropper,
-        this.elRef
+        this.element
       );
 
-      this.dialog = this.cmpRef.instance;
+      this.dialog = this.componentRef.instance;
 
-      if (this.vcRef !== vcRef) {
-        this.cmpRef.changeDetectorRef.detectChanges();
+      if (this.viewContainerRef !== viewContainerRef) {
+        this.componentRef.changeDetectorRef.detectChanges();
       }
     } else if (this.dialog) {
       // Update properties.
-      this.cmpRef.instance.cpAlphaChannel = this.cpAlphaChannel;
+      this.componentRef.instance.cpAlphaChannel = this.cpAlphaChannel;
 
       // Open dialog.
       this.dialog.openDialog(this.colorPicker);
@@ -299,8 +227,8 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
   }
 
   closeDialog(): void {
-    if (this.dialog && this.cpDialogDisplay === 'popup') {
-      this.dialog.closeDialog();
+    if (this.cpDialogDisplay === 'popup') {
+      this.dialog?.closeDialog();
     }
   }
 
@@ -318,7 +246,7 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
     }
   }
 
-  colorChanged(value: string, ignore: boolean = true): void {
+  colorChanged(value: string, ignore = true): void {
     this.ignoreChanges = ignore;
 
     this.colorPickerChange.emit(value);
@@ -333,29 +261,28 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
   }
 
   inputFocus(): void {
-    const element = this.elRef.nativeElement;
+    const element = this.element;
 
-    const ignored = this.cpIgnoredElements.filter(
-      (item: any) => item === element
-    );
+    const ignored = this.cpIgnoredElements.filter((item) => item === element);
 
     if (this.cpDisabled || ignored.length) return;
 
     if (element === document.activeElement) {
       this.openDialog();
-    } else if (!this.dialog || !this.dialog.show) {
+    } else if (!this.dialog || !this.dialog.shown()) {
       this.openDialog();
     } else {
       this.closeDialog();
     }
   }
 
-  inputChange(event: any): void {
-    if (this.dialog) {
-      this.dialog.setColorFromString(event.target.value, true);
-    } else {
-      this.colorPicker = event.target.value;
+  inputChange(event: InputEvent): void {
+    const { value } = <HTMLInputElement>event.target;
 
+    if (this.dialog) {
+      this.dialog.setColorFromString(value, true);
+    } else {
+      this.colorPicker = value;
       this.colorPickerChange.emit(this.colorPicker);
     }
   }

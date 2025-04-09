@@ -7,5 +7,6 @@ export {
   SliderDirective,
 } from './lib/helpers';
 
+export { ColorPickerComponent } from './lib/color-picker.component';
 export { ColorPickerDirective } from './lib/color-picker.directive';
 export { ColorPickerService } from './lib/color-picker.service';

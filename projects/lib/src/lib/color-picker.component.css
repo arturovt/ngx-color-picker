@@ -447,5 +447,6 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  fill: white;mix-blend-mode: exclusion;
+  fill: white;
+  mix-blend-mode: exclusion;
 }

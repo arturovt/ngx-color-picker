@@ -4,13 +4,15 @@ import { Cmyk, Rgba, Hsla, Hsva } from './formats';
 
 import { ColorPickerComponent } from './color-picker.component';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class ColorPickerService {
   private active: ColorPickerComponent | null = null;
 
-  public setActive(active: ColorPickerComponent | null): void {
+  setInactive(): void {
+    this.active = null;
+  }
+
+  setActive(active: ColorPickerComponent | null): void {
     if (
       this.active &&
       this.active !== active &&
@@ -22,7 +24,7 @@ export class ColorPickerService {
     this.active = active;
   }
 
-  public hsva2hsla(hsva: Hsva): Hsla {
+  hsva2hsla(hsva: Hsva): Hsla {
     const h = hsva.h,
       s = hsva.s,
       v = hsva.v,
@@ -39,123 +41,141 @@ export class ColorPickerService {
     }
   }
 
-  public hsla2hsva(hsla: Hsla): Hsva {
-    const h = Math.min(hsla.h, 1),
-      s = Math.min(hsla.s, 1);
-    const l = Math.min(hsla.l, 1),
-      a = Math.min(hsla.a, 1);
+  hsla2hsva(hsla: Hsla): Hsva {
+    // Clamp all HSLA values to a maximum of 1
+    const h = Math.min(hsla.h, 1);
+    const s = Math.min(hsla.s, 1);
+    const l = Math.min(hsla.l, 1);
+    const a = Math.min(hsla.a, 1);
 
-    if (l === 0) {
-      return new Hsva(h, 0, 0, a);
-    } else {
-      const v = l + (s * (1 - Math.abs(2 * l - 1))) / 2;
+    // If lightness is zero, the color is black (no saturation or value)
+    if (l === 0) return new Hsva(h, 0, 0, a);
 
-      return new Hsva(h, (2 * (v - l)) / v, v, a);
-    }
+    // Convert lightness and saturation to HSV value and saturation
+    const v = l + (s * (1 - Math.abs(2 * l - 1))) / 2;
+    const newS = (2 * (v - l)) / v;
+
+    return new Hsva(h, newS, v, a);
   }
 
-  public hsvaToRgba(hsva: Hsva): Rgba {
-    let r: number, g: number, b: number;
+  hsvaToRgba(hsva: Hsva): Rgba {
+    const { h, s, v, a } = hsva;
 
-    const h = hsva.h,
-      s = hsva.s,
-      v = hsva.v,
-      a = hsva.a;
+    const i = Math.floor(h * 6); // Determine which 1/6 sector of the hue circle
+    const f = h * 6 - i; // Fractional part for interpolation
+    const p = v * (1 - s); // Base component
+    const q = v * (1 - f * s); // Intermediate component 1
+    const t = v * (1 - (1 - f) * s); // Intermediate component 2
 
-    const i = Math.floor(h * 6);
-    const f = h * 6 - i;
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - (1 - f) * s);
+    let r = 0,
+      g = 0,
+      b = 0;
 
+    // Set RGB based on the hue sector
     switch (i % 6) {
       case 0:
-        (r = v), (g = t), (b = p);
+        r = v;
+        g = t;
+        b = p;
         break;
       case 1:
-        (r = q), (g = v), (b = p);
+        r = q;
+        g = v;
+        b = p;
         break;
       case 2:
-        (r = p), (g = v), (b = t);
+        r = p;
+        g = v;
+        b = t;
         break;
       case 3:
-        (r = p), (g = q), (b = v);
+        r = p;
+        g = q;
+        b = v;
         break;
       case 4:
-        (r = t), (g = p), (b = v);
+        r = t;
+        g = p;
+        b = v;
         break;
       case 5:
-        (r = v), (g = p), (b = q);
+        r = v;
+        g = p;
+        b = q;
         break;
-      default:
-        (r = 0), (g = 0), (b = 0);
     }
 
     return new Rgba(r, g, b, a);
   }
 
-  public cmykToRgb(cmyk: Cmyk): Rgba {
-    const r = (1 - cmyk.c) * (1 - cmyk.k);
-    const g = (1 - cmyk.m) * (1 - cmyk.k);
-    const b = (1 - cmyk.y) * (1 - cmyk.k);
+  cmykToRgb(cmyk: Cmyk): Rgba {
+    // Extract and clamp CMYK values (assuming they are already in [0, 1] range)
+    const { c, m, y, k, a } = cmyk;
 
-    return new Rgba(r, g, b, cmyk.a);
+    // Convert each RGB channel using the CMYK to RGB formula
+    const r = (1 - c) * (1 - k);
+    const g = (1 - m) * (1 - k);
+    const b = (1 - y) * (1 - k);
+
+    // Return RGBA color with converted RGB and original alpha
+    return new Rgba(r, g, b, a);
   }
 
-  public rgbaToCmyk(rgba: Rgba): Cmyk {
-    const k: number = 1 - Math.max(rgba.r, rgba.g, rgba.b);
+  rgbaToCmyk(rgba: Rgba): Cmyk {
+    const { r, g, b, a } = rgba;
 
+    // Calculate the black key (K) component
+    const k = 1 - Math.max(r, g, b);
+
+    // If the color is pure black, CMY components are all 0
     if (k === 1) {
-      return new Cmyk(0, 0, 0, 1, rgba.a);
-    } else {
-      const c = (1 - rgba.r - k) / (1 - k);
-      const m = (1 - rgba.g - k) / (1 - k);
-      const y = (1 - rgba.b - k) / (1 - k);
-
-      return new Cmyk(c, m, y, k, rgba.a);
+      return new Cmyk(0, 0, 0, 1, a);
     }
+
+    // Convert RGB to CMY using the CMYK conversion formula
+    const c = (1 - r - k) / (1 - k);
+    const m = (1 - g - k) / (1 - k);
+    const y = (1 - b - k) / (1 - k);
+
+    return new Cmyk(c, m, y, k, a);
   }
 
-  public rgbaToHsva(rgba: Rgba): Hsva {
-    let h: number, s: number;
+  rgbaToHsva(rgba: Rgba): Hsva {
+    // Clamp RGBA values to [0, 1] range
+    const r = Math.min(rgba.r, 1);
+    const g = Math.min(rgba.g, 1);
+    const b = Math.min(rgba.b, 1);
+    const a = Math.min(rgba.a, 1);
 
-    const r = Math.min(rgba.r, 1),
-      g = Math.min(rgba.g, 1);
-    const b = Math.min(rgba.b, 1),
-      a = Math.min(rgba.a, 1);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
 
-    const max = Math.max(r, g, b),
-      min = Math.min(r, g, b);
+    const v = max; // Value
+    const s = max === 0 ? 0 : delta / max; // Saturation
 
-    const v: number = max,
-      d = max - min;
+    let h = 0; // Default hue
 
-    s = max === 0 ? 0 : d / max;
-
-    if (max === min) {
-      h = 0;
-    } else {
+    // Calculate hue based on which channel is max
+    if (delta !== 0) {
       switch (max) {
         case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
+          h = (g - b) / delta + (g < b ? 6 : 0);
           break;
         case g:
-          h = (b - r) / d + 2;
+          h = (b - r) / delta + 2;
           break;
         case b:
-          h = (r - g) / d + 4;
+          h = (r - g) / delta + 4;
           break;
-        default:
-          h = 0;
       }
-
-      h /= 6;
+      h /= 6; // Normalize hue to [0, 1]
     }
 
     return new Hsva(h, s, v, a);
   }
 
-  public rgbaToHex(rgba: Rgba, allowHex8?: boolean): string {
+  rgbaToHex(rgba: Rgba, allowHex8?: boolean): string {
     /* eslint-disable no-bitwise */
     let hex =
       '#' +
@@ -171,7 +191,7 @@ export class ColorPickerService {
     return hex;
   }
 
-  public normalizeCMYK(cmyk: Cmyk): Cmyk {
+  normalizeCMYK(cmyk: Cmyk): Cmyk {
     return new Cmyk(
       cmyk.c / 100,
       cmyk.m / 100,
@@ -181,7 +201,7 @@ export class ColorPickerService {
     );
   }
 
-  public denormalizeCMYK(cmyk: Cmyk): Cmyk {
+  denormalizeCMYK(cmyk: Cmyk): Cmyk {
     return new Cmyk(
       Math.floor(cmyk.c * 100),
       Math.floor(cmyk.m * 100),
@@ -191,7 +211,7 @@ export class ColorPickerService {
     );
   }
 
-  public denormalizeRGBA(rgba: Rgba): Rgba {
+  denormalizeRGBA(rgba: Rgba): Rgba {
     return new Rgba(
       Math.round(rgba.r * 255),
       Math.round(rgba.g * 255),
@@ -200,7 +220,7 @@ export class ColorPickerService {
     );
   }
 
-  public stringToHsva(
+  stringToHsva(
     colorString: string = '',
     allowHex8: boolean = false
   ): Hsva | null {
@@ -293,7 +313,7 @@ export class ColorPickerService {
     return hsva;
   }
 
-  public outputFormat(
+  outputFormat(
     hsva: Hsva,
     outputFormat: string,
     alphaChannel: string | null

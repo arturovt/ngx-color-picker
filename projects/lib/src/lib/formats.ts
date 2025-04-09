@@ -1,4 +1,4 @@
-export enum ColorFormats {
+export const enum ColorFormats {
   HEX,
   RGBA,
   HSLA,

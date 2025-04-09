@@ -14,8 +14,6 @@ import {
   EmbeddedViewRef,
 } from '@angular/core';
 
-import { ColorPickerComponent } from './color-picker.component';
-
 import { AlphaChannel, ColorMode, OutputFormat } from './helpers';
 
 @Directive({
@@ -28,7 +26,9 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
   private dialogCreated: boolean = false;
   private ignoreChanges: boolean = false;
 
-  private cmpRef: ComponentRef<ColorPickerComponent>;
+  private cmpRef: ComponentRef<
+    import('./color-picker.component').ColorPickerComponent
+  >;
   private viewAttachedToAppRef: boolean = false;
 
   @Input() colorPicker: string;
@@ -185,7 +185,9 @@ export class ColorPickerDirective implements OnChanges, OnDestroy {
     }
   }
 
-  openDialog(): void {
+  async openDialog(): Promise<void> {
+    const { ColorPickerComponent } = await import('./color-picker.component');
+
     if (!this.dialogCreated) {
       let vcRef = this.vcRef;
 

@@ -9,6 +9,10 @@ import {
   ElementRef,
   ChangeDetectorRef,
   NgZone,
+  viewChild,
+  effect,
+  inject,
+  DestroyRef,
 } from '@angular/core';
 
 import {
@@ -139,7 +143,8 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   cpTriggerElement: ElementRef;
 
-  @ViewChild('dialogPopup', { static: true }) dialogElement: ElementRef;
+  readonly dialogPopup =
+    viewChild.required<ElementRef<HTMLElement>>('dialogPopup');
 
   @ViewChild('hueSlider', { static: true }) hueSlider: ElementRef;
   @ViewChild('alphaSlider', { static: true }) alphaSlider: ElementRef;
@@ -158,13 +163,27 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  constructor(
-    private ngZone: NgZone,
-    private elRef: ElementRef,
-    private cdRef: ChangeDetectorRef,
-    private service: ColorPickerService
-  ) {
+  private readonly ngZone = inject(NgZone);
+  private readonly ref = inject(ChangeDetectorRef);
+  private readonly element =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly service = inject(ColorPickerService);
+
+  constructor() {
     this.eyeDropperSupported = 'EyeDropper' in document;
+
+    effect(() => {
+      const { nativeElement } = this.dialogPopup();
+      this.ngZone.runOutsideAngular(() => {
+        const onClick = (event: MouseEvent) => event.stopPropagation();
+        nativeElement.addEventListener('click', onClick);
+        this.destroyRef.onDestroy(() =>
+          nativeElement.removeEventListener('click', onClick)
+        );
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -218,7 +237,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.updateColorPicker(false);
 
-      this.cdRef.detectChanges();
+      this.ref.detectChanges();
     }
   }
 
@@ -443,40 +462,37 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onMouseDown(event: MouseEvent): void {
-    if (
+    const isOutsideClick =
       this.show &&
       this.cpDialogDisplay === 'popup' &&
       event.target !== this.directiveElementRef.nativeElement &&
-      !this.isDescendant(this.elRef.nativeElement, event.target) &&
-      !this.isDescendant(
-        this.directiveElementRef.nativeElement,
-        event.target
-      ) &&
-      this.cpIgnoredElements.filter((item: any) => item === event.target)
-        .length === 0
-    ) {
-      this.ngZone.run(() => {
-        if (this.cpSaveClickOutside) {
-          this.directiveInstance.colorSelected(this.outputColor);
-        } else {
-          this.hsva = null;
+      !isDescendant(this.element, event.target) &&
+      !isDescendant(this.directiveElementRef.nativeElement, event.target) &&
+      !this.cpIgnoredElements.includes(event.target);
 
-          this.setColorFromString(this.initialColor, false);
+    if (!isOutsideClick) return;
 
-          if (this.cpCmykEnabled) {
-            this.directiveInstance.cmykChanged(this.cmykColor);
-          }
+    this.ngZone.run(() => {
+      if (this.cpSaveClickOutside) {
+        // Save selected color on outside click
+        this.directiveInstance.colorSelected(this.outputColor);
+      } else {
+        // Revert to initial color
+        this.hsva = null;
+        this.setColorFromString(this.initialColor, false);
 
-          this.directiveInstance.colorChanged(this.initialColor);
-
-          this.directiveInstance.colorCanceled();
+        if (this.cpCmykEnabled) {
+          this.directiveInstance.cmykChanged(this.cmykColor);
         }
 
-        if (this.cpCloseClickOutside) {
-          this.closeColorPicker();
-        }
-      });
-    }
+        this.directiveInstance.colorChanged(this.initialColor);
+        this.directiveInstance.colorCanceled();
+      }
+
+      if (this.cpCloseClickOutside) {
+        this.closeColorPicker();
+      }
+    });
   }
 
   onAcceptColor(event: Event): void {
@@ -904,7 +920,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
 
         this.setDialogPosition();
 
-        this.cdRef.detectChanges();
+        this.ref.detectChanges();
       }, 0);
 
       this.directiveInstance.stateChanged(true);
@@ -933,8 +949,8 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       window.removeEventListener('resize', this.listenerResize);
 
-      if (!this.cdRef['destroyed']) {
-        this.cdRef.detectChanges();
+      if (!this.ref['destroyed']) {
+        this.ref.detectChanges();
       }
     }
   }
@@ -1082,7 +1098,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       let node = this.directiveElementRef.nativeElement.parentNode;
 
-      const dialogHeight = this.dialogElement.nativeElement.offsetHeight;
+      const dialogHeight = this.dialogPopup().nativeElement.offsetHeight;
 
       while (node !== null && node.tagName !== 'HTML') {
         style = window.getComputedStyle(node);
@@ -1106,7 +1122,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
         node = node.parentNode;
       }
 
-      const boxDirective = this.createDialogBox(
+      const boxDirective = createDialogBox(
         this.directiveElementRef.nativeElement,
         position !== 'fixed'
       );
@@ -1123,10 +1139,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
           parentNode = node;
         }
 
-        const boxParent = this.createDialogBox(
-          parentNode,
-          position !== 'fixed'
-        );
+        const boxParent = createDialogBox(parentNode, position !== 'fixed');
 
         this.top = boxDirective.top - boxParent.top;
         this.left = boxDirective.left - boxParent.left;
@@ -1139,7 +1152,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
       let usePosition = this.cpPosition;
 
       const dialogBounds =
-        this.dialogElement.nativeElement.getBoundingClientRect();
+        this.dialogPopup().nativeElement.getBoundingClientRect();
       if (this.cpPosition === 'auto') {
         const triggerBounds =
           this.cpTriggerElement.nativeElement.getBoundingClientRect();
@@ -1204,7 +1217,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const windowInnerHeight = window.innerHeight;
       const windowInnerWidth = window.innerWidth;
-      const elRefClientRect = this.elRef.nativeElement.getBoundingClientRect();
+      const elRefClientRect = this.element.getBoundingClientRect();
       const bottom = this.top + dialogBounds.height;
       if (bottom > windowInnerHeight) {
         this.top = windowInnerHeight - dialogBounds.height;
@@ -1219,30 +1232,28 @@ export class ColorPickerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.cpUsePosition = usePosition;
     }
   }
+}
 
-  // Private helper functions for the color picker dialog positioning and opening
+function isDescendant(parent: any, child: any): boolean {
+  let node: any = child.parentNode;
 
-  private isDescendant(parent: any, child: any): boolean {
-    let node: any = child.parentNode;
-
-    while (node !== null) {
-      if (node === parent) {
-        return true;
-      }
-
-      node = node.parentNode;
+  while (node !== null) {
+    if (node === parent) {
+      return true;
     }
 
-    return false;
+    node = node.parentNode;
   }
 
-  private createDialogBox(element: any, offset: boolean): any {
-    const { top, left } = element.getBoundingClientRect();
-    return {
-      top: top + (offset ? window.pageYOffset : 0),
-      left: left + (offset ? window.pageXOffset : 0),
-      width: element.offsetWidth,
-      height: element.offsetHeight,
-    };
-  }
+  return false;
+}
+
+function createDialogBox(element: any, offset: boolean): any {
+  const { top, left } = element.getBoundingClientRect();
+  return {
+    top: top + (offset ? window.pageYOffset : 0),
+    left: left + (offset ? window.pageXOffset : 0),
+    width: element.offsetWidth,
+    height: element.offsetHeight,
+  };
 }

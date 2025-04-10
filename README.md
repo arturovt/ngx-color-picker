@@ -28,13 +28,13 @@ yarn start
 ### Installing and usage
 
 ```bash
-yarn add ngx-color-picker
+yarn add ngx-color-picker-next
 ```
 
 ##### Import the library into your project:
 
 ```javascript
-import { ColorPickerComponent, ColorPickerDirective } from 'ngx-color-picker';
+import { ColorPickerComponent, ColorPickerDirective } from 'ngx-color-picker-next';
 
 @NgModule({
   // ...
@@ -53,69 +53,60 @@ import { ColorPickerComponent, ColorPickerDirective } from 'ngx-color-picker';
 <input [(colorPicker)]="color" [style.background]="color" />
 ```
 
-```javascript
-[colorPicker][cpWidth][cpHeight][cpToggle][cpDisabled][cpColorMode][ // The color to show in the color picker dialog. // Use this option to set color picker dialog width ('230px'). // Use this option to force color picker dialog height ('auto'). // Sets the default open / close state of the color picker (false). // Disables opening of the color picker dialog via toggle / events. // Dialog color mode: 'color', 'grayscale', 'presets' ('color').
-  cpCmykEnabled
-][cpOutputFormat][cpAlphaChannel][cpFallbackColor][cpPosition][ // Enables CMYK input format and color change event (false). // Output color format: 'auto', 'hex', 'rgba', 'hsla' ('auto'). // Alpha mode: 'enabled', 'disabled', 'always', 'forced' ('enabled'). // Used when the color is not well-formed or is undefined ('#000'). //  'top-left', 'top-right', 'bottom-left', 'bottom-right' ('auto'). // Dialog position: 'auto', 'top', 'bottom', 'left', 'right',
-  cpPositionOffset
-][cpPositionRelativeToArrow][cpPresetLabel][cpPresetColors][cpDisableInput][ // Dialog offset percentage relative to the directive element (0%). // Dialog position is calculated relative to dialog arrow (false). // Label text for the preset colors if any provided ('Preset colors'). // Array of preset colors to show in the color picker dialog ([]).
-  cpDialogDisplay
-][cpIgnoredElements][cpSaveClickOutside][cpCloseClickOutside][cpOKButton][ //   inline: dialog is shown permanently (static positioning). //   popup: dialog is shown as popup (fixed positioning). // Disables / hides the color input field from the dialog (false). // Dialog positioning mode: 'popup', 'inline' ('popup'). // Array of HTML elements that will be ignored when clicked ([]). // Save currently selected color when user clicks outside (true). // Close the color picker dialog when user clicks outside (true). // Show an OK / Apply button which saves the color (false).
-  cpOKButtonText
-][cpOKButtonClass][cpCancelButton][cpCancelButtonText][cpCancelButtonClass][ // Button label text shown inside the OK / Apply button ('OK'). // Additional class for customizing the OK / Apply button (''). // Show a Cancel / Reset button which resets the color (false). // Button label text shown inside the Cancel / Reset button ('Cancel'). // Additional class for customizing the Cancel / Reset button ('').
-  cpAddColorButton
-][cpAddColorButtonText][cpAddColorButtonClass][cpRemoveColorButtonClass][ // Show an Add Color button which add the color into preset (false). // Button label text shown inside the Add Color button ('Add color'). // Additional class for customizing the Add Color button (''). // Additional class for customizing the Remove Color button ('').
-  cpPresetColorsClass
-][cpMaxPresetColorsLength][cpPresetEmptyMessage][cpPresetEmptyMessageClass](
-  // Create dialog component in the root view container (false).
-  // Note: The root component needs to have public viewContainerRef.
+Here’s your code neatly transformed into a **markdown table** with input/output options and their descriptions:
 
-  colorPickerOpen
-)(
-  // Current color value, send when dialog is opened (value: string).
-  colorPickerClose
-)(
-  // Current color value, send when dialog is closed (value: string).
+---
 
-  colorPickerChange
-)(
-  // Changed color value, send when color is changed (value: string).
-  colorPickerCancel
-)(
-  // Color select canceled, send when Cancel button is pressed (void).
-  colorPickerSelect
-)(
-  // Selected color value, send when OK button is pressed (value: string).
+| **Property / Event**        | **Description**                                                              |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `colorPicker`               | The color to show in the color picker dialog.                                |
+| `cpWidth`                   | Set color picker dialog width (`'230px'`).                                   |
+| `cpHeight`                  | Force color picker dialog height (`'auto'`).                                 |
+| `cpToggle`                  | Sets the default open/close state of the color picker (`false`).             |
+| `cpDisabled`                | Disables opening the color picker via toggle/events.                         |
+| `cpColorMode`               | Dialog color mode: `'color'`, `'grayscale'`, `'presets'` (`'color'`).        |
+| `cpCmykEnabled`             | Enables CMYK input format and color change event (`false`).                  |
+| `cpOutputFormat`            | Output color format: `'auto'`, `'hex'`, `'rgba'`, `'hsla'` (`'auto'`).       |
+| `cpAlphaChannel`            | Alpha mode: `'enabled'`, `'disabled'`, `'always'`, `'forced'` (`'enabled'`). |
+| `cpFallbackColor`           | Used when the color is invalid or undefined (`'#000'`).                      |
+| `cpPosition`                | Dialog position: `'auto'`, `'top'`, `'bottom'`, `'left'`, `'right'`.         |
+| `cpPositionOffset`          | Dialog offset % relative to directive element (`0%`).                        |
+| `cpPositionRelativeToArrow` | Position is relative to dialog arrow (`false`).                              |
+| `cpPresetLabel`             | Label for preset colors (`'Preset colors'`).                                 |
+| `cpPresetColors`            | Array of preset colors to show (`[]`).                                       |
+| `cpDisableInput`            | Disables/hides the color input field (`false`).                              |
+| `cpDialogDisplay`           | Dialog mode: `'popup'` (default), `'inline'`.                                |
+| `cpIgnoredElements`         | HTML elements ignored when clicked (`[]`).                                   |
+| `cpSaveClickOutside`        | Save selected color on outside click (`true`).                               |
+| `cpCloseClickOutside`       | Close dialog on outside click (`true`).                                      |
+| `cpOKButton`                | Show OK/Apply button (`false`).                                              |
+| `cpOKButtonText`            | Text for OK button (`'OK'`).                                                 |
+| `cpOKButtonClass`           | Class for customizing OK button (`''`).                                      |
+| `cpCancelButton`            | Show Cancel/Reset button (`false`).                                          |
+| `cpCancelButtonText`        | Text for Cancel button (`'Cancel'`).                                         |
+| `cpCancelButtonClass`       | Class for customizing Cancel button (`''`).                                  |
+| `cpAddColorButton`          | Show Add Color button (`false`).                                             |
+| `cpAddColorButtonText`      | Text for Add Color button (`'Add color'`).                                   |
+| `cpAddColorButtonClass`     | Class for customizing Add Color button (`''`).                               |
+| `cpRemoveColorButtonClass`  | Class for customizing Remove Color button (`''`).                            |
+| `cpPresetColorsClass`       | Custom class for preset colors section.                                      |
+| `cpMaxPresetColorsLength`   | Max number of preset colors.                                                 |
+| `cpPresetEmptyMessage`      | Message to show when presets are empty.                                      |
+| `cpPresetEmptyMessageClass` | Class for styling the empty message.                                         |
+| `colorPickerOpen`           | Emits current color when dialog opens.                                       |
+| `colorPickerClose`          | Emits current color when dialog closes.                                      |
+| `colorPickerChange`         | Emits changed color when user picks a new color.                             |
+| `colorPickerCancel`         | Emits when Cancel button is pressed.                                         |
+| `colorPickerSelect`         | Emits selected color when OK is pressed.                                     |
+| `cpToggleChange`            | Emits dialog open/close state (`boolean`).                                   |
+| `cpInputChange`             | Emits input change `{input, value, color}`.                                  |
+| `cpSliderChange`            | Emits slider change `{slider, value, color}`.                                |
+| `cpSliderDragStart`         | Emits on slider drag start `{slider, color}`.                                |
+| `cpSliderDragEnd`           | Emits on slider drag end `{slider, color}`.                                  |
+| `cpCmykColorChange`         | Emits CMYK string if enabled (`string`).                                     |
+| `cpPresetColorsChange`      | Emits when Add Color is pressed (`array`).                                   |
 
-  cpToggleChange
-)(
-  // Status of the dialog, send when dialog is opened / closed (open: boolean).
-
-  cpInputChange
-)(
-  // Input name and its value, send when user changes color through inputs
-  // ({input: string, value: number | string, color: string})
-
-  cpSliderChange
-)(
-  // Slider name and its value, send when user changes color through slider
-  //   ({slider: string, value: number | string, color: string})
-  cpSliderDragStart
-)(
-  // Slider name and current color, send when slider dragging starts (mousedown,touchstart)
-  //   ({slider: string, color: string})
-  cpSliderDragEnd
-)(
-  // Slider name and current color, send when slider dragging ends (mouseup,touchend)
-  //   ({slider: string, color: string})
-
-  cpCmykColorChange
-)(
-  // Outputs the color as CMYK string if CMYK is enabled (value: string).
-
-  cpPresetColorsChange
-); // Preset colors, send when 'Add Color' button is pressed (value: array).
-```
+---
 
 ##### Available control / helper functions (provided by the directive):
 

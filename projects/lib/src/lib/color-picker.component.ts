@@ -1,8 +1,6 @@
 import {
   Component,
   OnInit,
-  ViewChild,
-  HostListener,
   ViewEncapsulation,
   ElementRef,
   ChangeDetectorRef,
@@ -149,22 +147,10 @@ export class ColorPickerComponent implements OnInit {
   readonly dialogPopup =
     viewChild.required<ElementRef<HTMLElement>>('dialogPopup');
 
-  @ViewChild('hueSlider', { static: true }) hueSlider: ElementRef;
-  @ViewChild('alphaSlider', { static: true }) alphaSlider: ElementRef;
+  readonly hueSlider = viewChild.required<ElementRef<HTMLElement>>('hueSlider');
 
-  @HostListener('document:keyup.esc', ['$event']) handleEsc(event: any): void {
-    if (this.shown() && this.cpDialogDisplay === 'popup') {
-      this.onCancelColor(event);
-    }
-  }
-
-  @HostListener('document:keyup.enter', ['$event']) handleEnter(
-    event: any
-  ): void {
-    if (this.shown() && this.cpDialogDisplay === 'popup') {
-      this.onAcceptColor(event);
-    }
-  }
+  readonly alphaSlider =
+    viewChild.required<ElementRef<HTMLElement>>('alphaSlider');
 
   private readonly ngZone = inject(NgZone);
   private readonly ref = inject(ChangeDetectorRef);
@@ -177,6 +163,25 @@ export class ColorPickerComponent implements OnInit {
     this.eyeDropperSupported = 'EyeDropper' in document;
 
     const destroyRef = inject(DestroyRef);
+
+    const element = this.element;
+    const onKeyup = (event: KeyboardEvent) => {
+      if (!this.shown() || this.cpDialogDisplay !== 'popup') {
+        return;
+      }
+
+      if (event.keyCode === 27) {
+        // Escape.
+        this.ngZone.run(() => this.onCancelColor(event));
+      } else if (event.keyCode === 13) {
+        // Enter.
+        this.ngZone.run(() => this.onAcceptColor(event));
+      }
+    };
+    this.ngZone.runOutsideAngular(() =>
+      element.addEventListener('keyup', onKeyup)
+    );
+    destroyRef.onDestroy(() => element.removeEventListener('keyup', onKeyup));
 
     effect(() => {
       const { nativeElement } = this.dialogPopup();
@@ -195,8 +200,8 @@ export class ColorPickerComponent implements OnInit {
       // Only recalculate dimensions if a custom width is set or display mode is inline
       if (this.cpWidth !== 230 || this.cpDialogDisplay === 'inline') {
         // Get slider widths, fallback to default values if not available
-        const hueWidth = this.hueSlider.nativeElement.offsetWidth || 140;
-        const alphaWidth = this.alphaSlider.nativeElement.offsetWidth || 140;
+        const hueWidth = this.hueSlider().nativeElement.offsetWidth || 140;
+        const alphaWidth = this.alphaSlider().nativeElement.offsetWidth || 140;
 
         // Set maximum dimensions for sliders
         this.sliderDimMax = new SliderDimension(
@@ -216,8 +221,8 @@ export class ColorPickerComponent implements OnInit {
   ngOnInit(): void {
     this.slider = new SliderPosition(0, 0, 0, 0);
 
-    const hueWidth = this.hueSlider.nativeElement.offsetWidth || 140;
-    const alphaWidth = this.alphaSlider.nativeElement.offsetWidth || 140;
+    const hueWidth = this.hueSlider().nativeElement.offsetWidth || 140;
+    const alphaWidth = this.alphaSlider().nativeElement.offsetWidth || 140;
 
     this.sliderDimMax = new SliderDimension(
       hueWidth,
